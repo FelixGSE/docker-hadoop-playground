@@ -1,0 +1,64 @@
+version: '3'
+
+services:
+    namenode:
+        image: hadoop-playground:2.9.2
+        container_name: namenode
+        command: "namenode"
+        restart: on-failure
+        volumes:
+            - namenode_volume:/hadoop/dfs/name
+            - ./hadoop/config-hadoop/:/etc/hadoop/
+        networks:
+            - hadoop-playground
+        ports:
+            - 50070:50070
+    datanode:
+        image: hadoop-playground:2.9.2
+        depends_on:
+            - namenode
+        command: "datanode"
+        environment:
+            - WAIT_FOR_SVC_NAMENODE=namenode:9000  
+        restart: on-failure
+        volumes:
+            - datanode_volume:/hadoop/dfs/data
+            - ./hadoop/config-hadoop/:/etc/hadoop/
+        networks:
+            - hadoop-playground            
+    yarn-resourcemanager:
+        image: hadoop-playground:2.9.2
+        container_name: yarn-resourcemanager
+        depends_on:
+            - namenode
+        command: "resourcemanager"            
+        environment:
+            - WAIT_FOR_SVC_NAMENODE=namenode:9000 
+        restart: on-failure
+        volumes:
+            - ./hadoop/config-hadoop/:/etc/hadoop/
+        networks:
+            - hadoop-playground        
+        ports:
+            - 8088:8088
+    yarn-nodemanager:
+        image: hadoop-playground:2.9.2
+        container_name: yarn-nodemanager
+        depends_on:
+            - yarn-resourcemanager        
+        command: "nodemanager"
+        environment:
+            - WAIT_FOR_SVC_RESOURCEMANAGER=yarn-resourcemanager:8088         
+        restart: on-failure
+        volumes:
+            - ./hadoop/config-hadoop/:/etc/hadoop/
+        networks:
+            - hadoop-playground        
+
+networks:
+  hadoop-playground:
+
+volumes:
+  namenode_volume:
+  datanode_volume:
+

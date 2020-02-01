@@ -1,0 +1,55 @@
+version: '3.1'
+services:
+    hive-metastore-db:
+        image: postgres:11
+        container_name: hive-metastore-db
+        environment:
+            - POSTGRES_HOST=hive-metastore-db
+            - POSTGRES_PORT=5432
+            - POSTGRES_USER=hive
+            - POSTGRES_PASSWORD=hive
+            - POSTGRES_DB=metastore
+#        volumes:
+#            - metastore_volume:/var/lib/postgresql/data
+        networks:
+            - hive-playground_hadoop-playground                
+        ports:
+            - "5432:5432"
+    hive-metastore-service:
+        image: hive-playground:2.3.6
+        container_name: hive-metastore-svc
+        # entrypoint: tail -f /dev/null
+        command: hive-metastore-svc
+        environment:
+            - WAIT_FOR_SVC_META_STORE_DB=hive-metastore-db:5432
+        restart: on-failure            
+        volumes:
+            - ./hive/config-hive/:/opt/hive/conf/
+            - ./hadoop/config-hadoop/:/etc/hadoop/
+        networks:
+            - hive-playground_hadoop-playground
+        ports:
+            - "9083:9083"
+    hive-server:
+        image: hive-playground:2.3.6
+        container_name: hive-server    
+        command: "hive-server"        
+        # entrypoint: tail -f /dev/null
+        environment:
+            - WAIT_FOR_SVC_METASTORE_DB=hive-metastore-db:5432
+            - WAIT_FOR_SVC_METASTORE_SVC=hive-metastore-svc:9083
+        restart: on-failure            
+        volumes:
+            - ./hive/config-hive/:/opt/hive/conf/         
+            - ./hadoop/config-hadoop/:/etc/hadoop/               
+        networks:
+            - hive-playground_hadoop-playground    
+        ports:
+            - "10000:10000"
+
+networks:
+  hive-playground_hadoop-playground:
+    external: true
+
+volumes:
+  metastore_volume:
